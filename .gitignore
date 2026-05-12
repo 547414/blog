@@ -1,0 +1,10 @@
+**/.idea/
+**/.pytest_cache/
+**/logs/
+**/temp/
+**/node_modules/
+**/.claude/
+**/.env.development
+**/.env.production
+**/app_development_config.toml
+**/app_production_config.toml

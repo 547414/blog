@@ -1,0 +1,4 @@
+[settings]
+active = "development"
+#active = "test"
+#active = "production"
