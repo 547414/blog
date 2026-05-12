@@ -157,8 +157,8 @@ const textColors = ['#000','#374151','#ef4444','#f97316','#eab308','#22c55e','#3
 const bgColors = ['#fef9c3','#fce7f3','#ede9fe','#dbeafe','#dcfce7','#ffedd5','#fee2e2','#f3f4f6','#fff','transparent']
 
 const uploadImageFile = (file: File) => {
-  if (file.size > 10 * 1024 * 1024) {
-    notification.error({title: '图片不能超过 10MB', duration: 2000})
+  if (file.size > 100 * 1024 * 1024) {
+    notification.error({title: '图片不能超过 100MB', duration: 2000})
     return
   }
   apiUploadFile({file, fileName: file.name, fileSize: file.size}).then(res => {

@@ -1,0 +1,1 @@
+import{y as t}from"./index-C6g-eD46.js";const o="/storage",a=e=>{const i=new FormData;return i.append("file",e.file),e.fileName&&i.append("file_name",e.fileName),e.fileSize&&i.append("file_size",e.fileSize.toString()),t.post(`${o}/upload`,i,{headers:{"Content-Type":"multipart/form-data"}})};export{a};
