@@ -54,7 +54,7 @@ class WikiProjectRepository(BaseRepository):
         SELECT * FROM bt_wiki_project
         WHERE is_deleted IS FALSE
           AND code != 'HOME_PROJECT'
-        ORDER BY created_at
+        ORDER BY seq, created_at
         """
         return self.get_all_by_params(
             sql=sql,
@@ -83,7 +83,7 @@ class WikiProjectRepository(BaseRepository):
             """
             params['search'] = f'%{search}%'
         sql += """
-        ORDER BY created_at
+        ORDER BY seq, created_at
         """
         return self.get_page(
             sql=sql,
@@ -141,7 +141,7 @@ class WikiProjectRepository(BaseRepository):
             """
             params['search'] = f'%{search.strip()}%'
         sql += """
-        ORDER BY sub.latest_updated_at DESC NULLS LAST, wp.created_at DESC
+        ORDER BY wp.seq, sub.latest_updated_at DESC NULLS LAST, wp.created_at DESC
         """
         return self.get_page(
             sql=sql,

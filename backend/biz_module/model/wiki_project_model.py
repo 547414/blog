@@ -12,12 +12,14 @@ HOME_WIKI_PROJECT_CODE = 'HOME_PROJECT'
 class WikiProjectModel(BasicVersionModel):
     code: str = Field(..., description="项目编码")
     name: str = Field(..., description="项目名称")
+    seq: int = Field(0, description="排序")
     is_deleted: bool = Field(False, description="是否删除")
 
 
 class PublicWikiProjectItemModel(BasicVersionModel):
     code: str = Field(..., description="项目编码")
     name: str = Field(..., description="项目名称")
+    seq: int = Field(0, description="排序")
     is_deleted: bool = Field(False, description="是否删除")
     wiki_count: int = Field(0, description="公开Wiki数量")
     latest_updated_at: Optional[datetime] = Field(None, description="最近Wiki更新时间")
@@ -28,6 +30,7 @@ class EditWikiProjectParamsModel(BasisModel):
     code: str = Field(..., description="项目编码")
     name: str = Field(..., description="项目名称")
     desc: Optional[str] = Field(None, description="项目描述")
+    seq: int = Field(0, description="排序")
 
 
 class DeleteWikiProjectParamsModel(BasisModel):

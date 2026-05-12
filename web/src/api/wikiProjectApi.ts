@@ -10,6 +10,7 @@ export interface WikiProjectDetail {
     code: string;
     name: string;
     desc: string | null;
+    seq: number;
     createdAt: string | null;
     updatedAt: string | null;
 }
@@ -58,6 +59,7 @@ export interface EditWikiProjectParams {
     code: string;
     name: string;
     desc: string | null;
+    seq: number;
 }
 
 export interface EditWikiProjectResponse extends Response {

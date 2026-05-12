@@ -1,1 +1,0 @@
-import{y as t}from"./index-RJWN9eyv.js";const i="/wiki_project",a=e=>t.get(`${i}/detail/${e}`),c=e=>t.get(`${i}/public/detail/${e}`),o=e=>t.post(`${i}/page`,e),s=e=>t.get(`${i}/public/page`,{params:e}),p=e=>t.post(`${i}/edit`,e),n=e=>t.post(`${i}/delete`,e);export{s as a,c as b,o as c,p as d,n as e,a as f};

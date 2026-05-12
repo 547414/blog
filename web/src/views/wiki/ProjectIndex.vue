@@ -93,6 +93,10 @@
         <span>项目描述</span>
         <n-input v-model:value="projectModal.form.desc" type="textarea" placeholder="项目描述"/>
       </label>
+      <label>
+        <span>排序码</span>
+        <n-input-number v-model:value="projectModal.form.seq" :min="0" placeholder="数值越小越靠前" style="width:100%"/>
+      </label>
     </div>
     <template #footer>
       <div class="modal-footer">
@@ -107,7 +111,7 @@
 import {computed, onMounted, ref} from 'vue'
 import {useRouter} from 'vue-router'
 import {Icon} from '@iconify/vue'
-import {NButton, NInput, NModal, NSpin, useDialog, useNotification} from 'naive-ui'
+import {NButton, NInput, NInputNumber, NModal, NSpin, useDialog, useNotification} from 'naive-ui'
 import dayjs from 'dayjs'
 import {
   apiDeleteWikiProject,
@@ -145,6 +149,7 @@ const projectModal = ref<WikiProjectModalState>({
     code: '',
     name: '',
     desc: null,
+    seq: 0,
   },
 })
 
@@ -196,12 +201,14 @@ const openProjectModal = (project: WikiProjectDetail | null) => {
         code: project.code,
         name: project.name,
         desc: project.desc || '',
+        seq: project.seq || 0,
       }
       : {
         projectId: null,
         code: '',
         name: '',
         desc: '',
+        seq: 0,
       }
   projectModal.value.form = form
   projectModal.value.visible = true

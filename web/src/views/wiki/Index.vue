@@ -49,7 +49,15 @@
               @select="handleSelectPage"
               @add-child="handleNewPage"
               @contextmenu="handleNodeContextMenu"
+              @node-drop="handleNodeDrop"
           />
+          <div
+              class="tree-root-dropzone"
+              :class="{ active: rootDropActive }"
+              @dragover.prevent="rootDropActive = true"
+              @dragleave="rootDropActive = false"
+              @drop.prevent="handleRootDrop"
+          >拖到此处置为根节点</div>
         </template>
       </div>
     </div>
@@ -258,6 +266,7 @@ import {
   apiDeleteWikiPageFile,
   apiGetWikiPageHistoryList,
   apiSetWikiPageVisibility,
+  apiSaveWikiPageTree,
   type WikiPageTreeItem,
   type WikiPageDetail,
   type WikiPageFileDetail,
@@ -299,6 +308,14 @@ interface WikiVisibilityModalState {
   saving: boolean
 }
 
+type DropPosition = 'before' | 'after' | 'inside'
+
+interface TreeDropPayload {
+  dragId: string
+  targetId: string
+  position: DropPosition
+}
+
 const WikiTreeNode = defineComponent({
   name: 'WikiTreeNode',
   props: {
@@ -306,9 +323,21 @@ const WikiTreeNode = defineComponent({
     activeId: {type: String, default: null},
     depth: {type: Number, default: 0},
   },
-  emits: ['select', 'add-child', 'contextmenu'],
+  emits: ['select', 'add-child', 'contextmenu', 'node-drop'],
   setup(props, {emit}) {
     const expanded = ref(true)
+    const dropIndicator = ref<DropPosition | null>(null)
+
+    const computePosition = (e: DragEvent): DropPosition => {
+      const target = e.currentTarget as HTMLElement
+      const rect = target.getBoundingClientRect()
+      const offsetY = e.clientY - rect.top
+      const ratio = offsetY / rect.height
+      if (ratio < 0.25) return 'before'
+      if (ratio > 0.75) return 'after'
+      return 'inside'
+    }
+
     return () => {
       const {node, activeId, depth} = props
       const isActive = node.id === activeId
@@ -317,10 +346,34 @@ const WikiTreeNode = defineComponent({
           : null
       return h('div', {class: 'tree-node'}, [
         h('div', {
-          class: ['tree-node-row', isActive && 'active'],
+          class: ['tree-node-row', isActive && 'active', dropIndicator.value && `drop-${dropIndicator.value}`],
           style: {paddingLeft: `${12 + depth * 16}px`},
+          draggable: true,
           onClick: () => emit('select', node.id),
-          onContextmenu: (e: MouseEvent) => {e.preventDefault(); emit('contextmenu', {node, event: e})}
+          onContextmenu: (e: MouseEvent) => {e.preventDefault(); emit('contextmenu', {node, event: e})},
+          onDragstart: (e: DragEvent) => {
+            e.stopPropagation()
+            if (e.dataTransfer) {
+              e.dataTransfer.effectAllowed = 'move'
+              e.dataTransfer.setData('text/plain', node.id)
+            }
+          },
+          onDragover: (e: DragEvent) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+            dropIndicator.value = computePosition(e)
+          },
+          onDragleave: () => {dropIndicator.value = null},
+          onDrop: (e: DragEvent) => {
+            e.preventDefault()
+            e.stopPropagation()
+            const dragId = e.dataTransfer?.getData('text/plain') || ''
+            const position = dropIndicator.value || computePosition(e)
+            dropIndicator.value = null
+            if (!dragId || dragId === node.id) return
+            emit('node-drop', {dragId, targetId: node.id, position} as TreeDropPayload)
+          },
         }, [
           node.childList?.length
               ? h('span', {
@@ -343,6 +396,7 @@ const WikiTreeNode = defineComponent({
                   onSelect: (id: string) => emit('select', id),
                   onAddChild: (id: string) => emit('add-child', id),
                   onContextmenu: (payload: TreeContextMenuPayload) => emit('contextmenu', payload),
+                  onNodeDrop: (payload: TreeDropPayload) => emit('node-drop', payload),
                 })
             ))
             : null,
@@ -390,6 +444,88 @@ const handlePreviewFile = (f: WikiPageFileDetail) => {
 
 const handleDownloadFile = (f: WikiPageFileDetail) => {
   downloadFromUrl(f.url, f.fileName)
+}
+
+// 拖拽
+const rootDropActive = ref(false)
+
+const findNodeWithParent = (
+    list: WikiPageTreeItem[],
+    id: string,
+    parent: WikiPageTreeItem | null = null,
+): { node: WikiPageTreeItem; parent: WikiPageTreeItem | null; siblings: WikiPageTreeItem[] } | null => {
+  for (const item of list) {
+    if (item.id === id) return { node: item, parent, siblings: list }
+    if (item.childList?.length) {
+      const found = findNodeWithParent(item.childList, id, item)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+const isDescendant = (node: WikiPageTreeItem, targetId: string): boolean => {
+  if (!node.childList?.length) return false
+  for (const child of node.childList) {
+    if (child.id === targetId) return true
+    if (isDescendant(child, targetId)) return true
+  }
+  return false
+}
+
+const persistTree = () => {
+  apiSaveWikiPageTree({
+    projectId: projectId.value,
+    pageList: pageTree.value,
+  }).then(res => {
+    if (res.code === 200) {
+      notification.success({ title: '排序已更新', duration: 1500 })
+      loadTree()
+    } else {
+      notification.error({ title: '排序保存失败', content: res.message, duration: 3000 })
+      loadTree()
+    }
+  }).catch(err => {
+    notification.error({ title: '排序保存失败', content: err?.message || '网络错误', duration: 3000 })
+    loadTree()
+  })
+}
+
+const handleNodeDrop = ({ dragId, targetId, position }: { dragId: string; targetId: string; position: 'before' | 'after' | 'inside' }) => {
+  if (dragId === targetId) return
+  const dragInfo = findNodeWithParent(pageTree.value, dragId)
+  const targetInfo = findNodeWithParent(pageTree.value, targetId)
+  if (!dragInfo || !targetInfo) return
+  if (isDescendant(dragInfo.node, targetId)) {
+    notification.warning({ title: '不能拖到自身子节点', duration: 2000 })
+    return
+  }
+  const dragIndex = dragInfo.siblings.indexOf(dragInfo.node)
+  if (dragIndex > -1) dragInfo.siblings.splice(dragIndex, 1)
+
+  if (position === 'inside') {
+    if (!targetInfo.node.childList) targetInfo.node.childList = []
+    targetInfo.node.childList.push(dragInfo.node)
+  } else {
+    const targetSiblings = targetInfo.siblings
+    let insertIndex = targetSiblings.indexOf(targetInfo.node)
+    if (position === 'after') insertIndex += 1
+    targetSiblings.splice(insertIndex, 0, dragInfo.node)
+  }
+  persistTree()
+}
+
+const handleRootDrop = (e: DragEvent) => {
+  rootDropActive.value = false
+  const dragId = e.dataTransfer?.getData('text/plain') || ''
+  if (!dragId) return
+  const dragInfo = findNodeWithParent(pageTree.value, dragId)
+  if (!dragInfo) return
+  if (dragInfo.parent === null) return
+  const idx = dragInfo.siblings.indexOf(dragInfo.node)
+  if (idx > -1) dragInfo.siblings.splice(idx, 1)
+  pageTree.value.push(dragInfo.node)
+  persistTree()
 }
 
 // 右键菜单
@@ -884,6 +1020,7 @@ onMounted(() => {
   margin: 1px 8px;
   font-size: 13px;
   color: #374151;
+  position: relative;
   transition: background .12s;
 
   &:hover {
@@ -895,6 +1032,42 @@ onMounted(() => {
     background: #eef2ff;
     color: #4f46e5;
     font-weight: 500;
+  }
+
+  &.drop-inside {
+    background: rgba(79, 70, 229, .12);
+    box-shadow: inset 0 0 0 1.5px #4f46e5;
+  }
+
+  &.drop-before::before,
+  &.drop-after::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    right: 6px;
+    height: 2px;
+    background: #4f46e5;
+    border-radius: 2px;
+  }
+
+  &.drop-before::before { top: -1px; }
+  &.drop-after::after { bottom: -1px; }
+}
+
+.tree-root-dropzone {
+  margin: 10px 12px;
+  padding: 10px;
+  border: 1px dashed #d1d5db;
+  border-radius: 8px;
+  color: #9ca3af;
+  font-size: 11px;
+  text-align: center;
+  transition: all .12s;
+
+  &.active {
+    border-color: #4f46e5;
+    color: #4f46e5;
+    background: #eef2ff;
   }
 }
 

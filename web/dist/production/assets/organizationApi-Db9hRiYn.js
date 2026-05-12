@@ -1,0 +1,1 @@
+import{y as e}from"./index-Bu3x920x.js";const a="/organization",r=t=>e.post(`${a}/tree`,t),i=t=>e.post(`${a}/edit`,t),o=t=>e.get(`${a}/detail/${t}`),s=t=>e.post(`${a}/delete`,t),p=t=>e.post(`${a}/save_seq_and_parent`,t);export{r as a,o as b,i as c,s as d,p as e};

@@ -156,6 +156,43 @@ const fileInputRef = ref<HTMLInputElement>()
 const textColors = ['#000','#374151','#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#8b5cf6','#ec4899','#fff']
 const bgColors = ['#fef9c3','#fce7f3','#ede9fe','#dbeafe','#dcfce7','#ffedd5','#fee2e2','#f3f4f6','#fff','transparent']
 
+const uploadImageFile = (file: File) => {
+  if (file.size > 10 * 1024 * 1024) {
+    notification.error({title: '图片不能超过 10MB', duration: 2000})
+    return
+  }
+  apiUploadFile({file, fileName: file.name, fileSize: file.size}).then(res => {
+    if (res.code === 200 && res.data) {
+      editor.value?.chain().focus().setImage({src: res.data.url || ''}).run()
+    } else {
+      notification.error({title: '上传失败', content: res.message, duration: 2000})
+    }
+  }).catch(err => {
+    notification.error({title: '上传失败', content: err?.message || '网络错误', duration: 2000})
+  })
+}
+
+const extractImageFiles = (dataTransfer: DataTransfer | null): File[] => {
+  if (!dataTransfer) return []
+  const files: File[] = []
+  if (dataTransfer.items && dataTransfer.items.length) {
+    for (let i = 0; i < dataTransfer.items.length; i++) {
+      const item = dataTransfer.items[i]
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const file = item.getAsFile()
+        if (file) files.push(file)
+      }
+    }
+  }
+  if (!files.length && dataTransfer.files && dataTransfer.files.length) {
+    for (let i = 0; i < dataTransfer.files.length; i++) {
+      const file = dataTransfer.files[i]
+      if (file.type.startsWith('image/')) files.push(file)
+    }
+  }
+  return files
+}
+
 const editor = useEditor({
   extensions: [
     StarterKit,
@@ -169,6 +206,20 @@ const editor = useEditor({
   content: props.modelValue || '',
   editorProps: {
     attributes: {class: 'prose focus:outline-none'},
+    handlePaste: (_view, event) => {
+      const files = extractImageFiles(event.clipboardData)
+      if (!files.length) return false
+      event.preventDefault()
+      files.forEach(uploadImageFile)
+      return true
+    },
+    handleDrop: (_view, event) => {
+      const files = extractImageFiles((event as DragEvent).dataTransfer)
+      if (!files.length) return false
+      event.preventDefault()
+      files.forEach(uploadImageFile)
+      return true
+    },
   },
   onUpdate: ({editor}) => {
     emit('update:modelValue', editor.getHTML())
@@ -188,18 +239,7 @@ const handleImageUpload = () => fileInputRef.value?.click()
 
 const handleFileChange = (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0]
-  if (!file) return
-  if (file.size > 10 * 1024 * 1024) {
-    notification.error({title: '图片不能超过 10MB', duration: 2000})
-    return
-  }
-  apiUploadFile({file, fileName: file.name, fileSize: file.size}).then(res => {
-    if (res.code === 200 && res.data) {
-      editor.value?.chain().focus().setImage({src: res.data.url || ''}).run()
-    } else {
-      notification.error({title: '上传失败', content: res.message, duration: 2000})
-    }
-  })
+  if (file) uploadImageFile(file)
   ;(e.target as HTMLInputElement).value = ''
 }
 </script>

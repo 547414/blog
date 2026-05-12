@@ -77,6 +77,7 @@ class WikiProjectService:
             project.code = params.code
             project.name = params.name
             project.desc = params.desc
+            project.seq = params.seq or 0
             project.operator_category = EnumOperatorCategory.UNION_USER.value
             project.operator = current_user_info.union_user_info.id
             self.__wiki_project_repository.update(model=project)
@@ -86,6 +87,7 @@ class WikiProjectService:
             code=params.code,
             name=params.name,
             desc=params.desc,
+            seq=params.seq or 0,
             is_deleted=False,
             operator_category=EnumOperatorCategory.UNION_USER.value,
             operator=current_user_info.union_user_info.id,
