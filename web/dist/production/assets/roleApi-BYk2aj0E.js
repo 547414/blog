@@ -1,0 +1,1 @@
+import{y as t}from"./index-RJWN9eyv.js";const s="/role",o=e=>t.post(`${s}/page`,e),r=e=>t.post(`${s}/change_enabled`,e),n=e=>t.post(`${s}/edit`,e),i=e=>t.post(`${s}/delete`,e),p=()=>t.get(`${s}/statistics`);export{n as a,p as b,o as c,r as d,i as e};

@@ -156,7 +156,7 @@ if (localUnionUserInfo) {
     content: '您已登录，正在跳转到首页...',
     duration: 3000
   })
-  router.push('/project/list')
+  router.push('/wiki-project')
 }
 
 const formValue = ref<WebUserLoginParams>({
@@ -253,7 +253,7 @@ const webUserLogin = () => {
         duration: 3000
       })
       // 登录成功后跳转到首页或其他页面
-      router.push('/project/list')
+      router.push('/wiki-project')
     } else {
       notification.error({
         title: '登录失败',
